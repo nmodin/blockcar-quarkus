@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mvnw quarkus:dev:*)",
+      "Bash(npm run dev:*)",
+      "Bash(mvn quarkus:dev:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

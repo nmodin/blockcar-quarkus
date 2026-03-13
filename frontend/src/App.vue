@@ -104,7 +104,7 @@
     </div>
 
     <div v-if="loading" class="loading">
-      Söker efter bilar...
+      {{ statusMessage }}
     </div>
 
     <div v-if="results && !loading" class="results">
@@ -159,7 +159,8 @@ export default {
       },
       results: null,
       loading: false,
-      error: null
+      error: null,
+      statusMessage: 'Söker efter bilar...'
     }
   },
   methods: {
@@ -167,13 +168,74 @@ export default {
       this.loading = true
       this.error = null
       this.results = null
+      this.statusMessage = 'Söker efter bilar...'
 
       try {
-        const response = await axios.post('/api/cars/search', this.filters)
-        this.results = response.data
+        const response = await fetch('/api/cars/search-stream', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(this.filters)
+        })
+
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+
+          // Process complete events (separated by double newline)
+          let eventEnd
+          while ((eventEnd = buffer.indexOf('\n\n')) !== -1) {
+            const eventText = buffer.substring(0, eventEnd)
+            buffer = buffer.substring(eventEnd + 2)
+
+            console.log('SSE Event received:', eventText)
+
+            // Parse event and data lines
+            const lines = eventText.split('\n')
+            let eventType = null
+            let eventData = null
+
+            for (const line of lines) {
+              if (line.startsWith('event:')) {
+                eventType = line.substring(6).trim()
+              } else if (line.startsWith('data:')) {
+                eventData = line.substring(5).trim()
+              }
+            }
+
+            console.log('Parsed - Type:', eventType, 'Data:', eventData)
+
+            if (eventType && eventData !== null) {
+              if (eventType === 'status') {
+                this.statusMessage = eventData
+                console.log('Status updated to:', eventData)
+              } else if (eventType === 'result') {
+                this.results = JSON.parse(eventData)
+                console.log('Results received:', this.results.count, 'cars')
+              } else if (eventType === 'error') {
+                this.error = 'Ett fel uppstod vid sökning: ' + eventData
+                this.loading = false
+                return
+              } else if (eventType === 'done') {
+                console.log('Search complete')
+                this.loading = false
+                return
+              }
+            }
+          }
+        }
+
+        this.loading = false
       } catch (err) {
-        this.error = 'Ett fel uppstod vid sökning: ' + (err.response?.data?.message || err.message)
-      } finally {
+        console.error('Search error:', err)
+        this.error = 'Ett fel uppstod vid sökning: ' + (err.message || err)
         this.loading = false
       }
     },
