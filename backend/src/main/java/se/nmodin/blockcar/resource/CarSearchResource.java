@@ -102,7 +102,6 @@ public class CarSearchResource {
     }
 
     private void sendEvent(SseEventSink eventSink, Sse sse, String name, String data) {
-        LOG.info("Sending SSE event - Type: " + name + ", Data: " + (data.length() > 50 ? data.substring(0, 50) + "..." : data));
         OutboundSseEvent event = sse.newEventBuilder()
                 .name(name)
                 .data(data)
@@ -113,7 +112,6 @@ public class CarSearchResource {
         // Wait for the event to be sent before continuing
         try {
             stage.toCompletableFuture().get(5, java.util.concurrent.TimeUnit.SECONDS);
-            LOG.info("Event sent successfully: " + name);
         } catch (Exception e) {
             LOG.error("Failed to send SSE event: " + name, e);
         }

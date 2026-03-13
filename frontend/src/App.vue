@@ -195,8 +195,6 @@ export default {
             const eventText = buffer.substring(0, eventEnd)
             buffer = buffer.substring(eventEnd + 2)
 
-            console.log('SSE Event received:', eventText)
-
             // Parse event and data lines
             const lines = eventText.split('\n')
             let eventType = null
@@ -210,21 +208,16 @@ export default {
               }
             }
 
-            console.log('Parsed - Type:', eventType, 'Data:', eventData)
-
             if (eventType && eventData !== null) {
               if (eventType === 'status') {
                 this.statusMessage = eventData
-                console.log('Status updated to:', eventData)
               } else if (eventType === 'result') {
                 this.results = JSON.parse(eventData)
-                console.log('Results received:', this.results.count, 'cars')
               } else if (eventType === 'error') {
                 this.error = 'Ett fel uppstod vid sökning: ' + eventData
                 this.loading = false
                 return
               } else if (eventType === 'done') {
-                console.log('Search complete')
                 this.loading = false
                 return
               }
@@ -234,7 +227,6 @@ export default {
 
         this.loading = false
       } catch (err) {
-        console.error('Search error:', err)
         this.error = 'Ett fel uppstod vid sökning: ' + (err.message || err)
         this.loading = false
       }
